@@ -33,6 +33,12 @@ namespace HarmonyLib
 		{
 		}
 
+		internal static CodeInstruction Annotation(string annotation)
+			=> new(OpCodes.Nop, annotation);
+
+		internal string IsAnnotation()
+			=> opcode == OpCodes.Nop ? operand as string : null;
+
 		/// <summary>Creates a new CodeInstruction with a given opcode and optional operand</summary>
 		/// <param name="opcode">The opcode</param>
 		/// <param name="operand">The operand</param>
@@ -121,25 +127,25 @@ namespace HarmonyLib
 
 		/// <summary>Creates a CodeInstruction calling a method (CALL)</summary>
 		/// <param name="expression">The lambda expression using the method</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		///
 		public static CodeInstruction Call(Expression<Action> expression) => new(OpCodes.Call, SymbolExtensions.GetMethodInfo(expression));
 
 		/// <summary>Creates a CodeInstruction calling a method (CALL)</summary>
 		/// <param name="expression">The lambda expression using the method</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		///
 		public static CodeInstruction Call<T>(Expression<Action<T>> expression) => new(OpCodes.Call, SymbolExtensions.GetMethodInfo(expression));
 
 		/// <summary>Creates a CodeInstruction calling a method (CALL)</summary>
 		/// <param name="expression">The lambda expression using the method</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		///
 		public static CodeInstruction Call<T, TResult>(Expression<Func<T, TResult>> expression) => new(OpCodes.Call, SymbolExtensions.GetMethodInfo(expression));
 
 		/// <summary>Creates a CodeInstruction calling a method (CALL)</summary>
 		/// <param name="expression">The lambda expression using the method</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		///
 		public static CodeInstruction Call(LambdaExpression expression) => new(OpCodes.Call, SymbolExtensions.GetMethodInfo(expression));
 
@@ -159,7 +165,7 @@ namespace HarmonyLib
 		/// <param name="type">The class/type where the field is defined</param>
 		/// <param name="name">The name of the field (case sensitive)</param>
 		/// <param name="useAddress">Use address of field</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		public static CodeInstruction LoadField(Type type, string name, bool useAddress = false)
 		{
 			var field = AccessTools.Field(type, name);
@@ -170,7 +176,7 @@ namespace HarmonyLib
 		/// <summary>Creates a CodeInstruction storing to a field (ST[S]FLD)</summary>
 		/// <param name="type">The class/type where the field is defined</param>
 		/// <param name="name">The name of the field (case sensitive)</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		public static CodeInstruction StoreField(Type type, string name)
 		{
 			var field = AccessTools.Field(type, name);
@@ -183,7 +189,7 @@ namespace HarmonyLib
 		/// <summary>Creates a CodeInstruction loading a local with the given index, using the shorter forms when possible</summary>
 		/// <param name="index">The index where the local is stored</param>
 		/// <param name="useAddress">Use address of local</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		/// <seealso cref="CodeInstructionExtensions.LocalIndex(CodeInstruction)"/>
 		public static CodeInstruction LoadLocal(int index, bool useAddress = false)
 		{
@@ -205,7 +211,7 @@ namespace HarmonyLib
 
 		/// <summary>Creates a CodeInstruction storing to a local with the given index, using the shorter forms when possible</summary>
 		/// <param name="index">The index where the local is stored</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		/// <seealso cref="CodeInstructionExtensions.LocalIndex(CodeInstruction)"/>
 		public static CodeInstruction StoreLocal(int index)
 		{
@@ -222,7 +228,7 @@ namespace HarmonyLib
 		/// <summary>Creates a CodeInstruction loading an argument with the given index, using the shorter forms when possible</summary>
 		/// <param name="index">The index of the argument</param>
 		/// <param name="useAddress">Use address of argument</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		/// <seealso cref="CodeInstructionExtensions.ArgumentIndex(CodeInstruction)"/>
 		public static CodeInstruction LoadArgument(int index, bool useAddress = false)
 		{
@@ -244,13 +250,20 @@ namespace HarmonyLib
 
 		/// <summary>Creates a CodeInstruction storing to an argument with the given index, using the shorter forms when possible</summary>
 		/// <param name="index">The index of the argument</param>
-		/// <returns></returns>
+		/// <returns>A new Codeinstruction</returns>
 		/// <seealso cref="CodeInstructionExtensions.ArgumentIndex(CodeInstruction)"/>
 		public static CodeInstruction StoreArgument(int index)
 		{
 			if (index < 256) return new CodeInstruction(OpCodes.Starg_S, Convert.ToByte(index));
 			else return new CodeInstruction(OpCodes.Starg, index);
 		}
+
+		/// <summary>Checks if a CodeInstruction contains a given exception block type</summary>
+		/// <param name="type">Type of the exception block to check for</param>
+		/// <returns>True if the instruction contains the exception block type, false otherwise</returns>
+		///
+		public bool HasBlock(ExceptionBlockType type)
+			=> blocks?.Any(block => block.blockType == type) ?? false;
 
 		// --- TOSTRING
 

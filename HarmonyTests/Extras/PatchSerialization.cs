@@ -1,18 +1,24 @@
 using HarmonyLib;
 using NUnit.Framework;
 using System.Linq;
+
+#if NET5_0_OR_GREATER
 using System.Text;
+#endif
 
 namespace HarmonyTests.Extras
 {
 	[TestFixture, NonParallelizable]
 	class PatchSerialization
 	{
+		static string[] fixNames = ["prefixes", "postfixes", "transpilers", "finalizers", "ilmanipulators", "innerprefixes", "innerpostfixes"];
+		static Patch[][] GetFixes(PatchInfo patchInfo) => [patchInfo.prefixes, patchInfo.postfixes, patchInfo.transpilers, patchInfo.finalizers, patchInfo.ilmanipulators, patchInfo.innerprefixes, patchInfo.innerpostfixes];
+
 		static string ExpectedJSON()
 		{
 			var method = SymbolExtensions.GetMethodInfo(() => ExpectedJSON());
 			var fix = "\"$FIX$\":[{\"index\":0,\"debug\":true,\"owner\":\"$NAME$\",\"priority\":600,\"methodToken\":$MT$,\"moduleGUID\":\"$MGUID$\",\"after\":[],\"before\":[\"p1\",null,\"p2\"]}]";
-			var fixes = new[] { "prefixes", "postfixes", "transpilers", "finalizers", "ilmanipulators" }
+			var fixes = fixNames
 				.Select(name =>
 				{
 					return fix
@@ -24,10 +30,10 @@ namespace HarmonyTests.Extras
 				.ToList()
 				.Join(delimiter: ",");
 
-			return "{" + fixes + "}";
+			return "{" + fixes + ",\"VersionCount\":123}";
 		}
 
-#if !NETFRAMEWORK
+#if NET5_0_OR_GREATER
 		[Test]
 		public void Serialize()
 		{
@@ -40,6 +46,9 @@ namespace HarmonyTests.Extras
 			patchInfo.AddTranspilers("transpilers", [hMethod]);
 			patchInfo.AddFinalizers("finalizers", [hMethod]);
 			patchInfo.AddILManipulators("ilmanipulators", [hMethod]);
+			patchInfo.AddInnerPrefixes("innerprefixes", [hMethod]);
+			patchInfo.AddInnerPostfixes("innerpostfixes", [hMethod]);
+			patchInfo.VersionCount = 123;
 
 			PatchInfoSerialization.useBinaryFormatter = false;
 			var result = PatchInfoSerialization.Serialize(patchInfo);
@@ -52,17 +61,19 @@ namespace HarmonyTests.Extras
 		{
 			PatchInfoSerialization.useBinaryFormatter = false;
 
+			Assert.AreEqual(GetFixes(new PatchInfo()).Length, fixNames.Length);
+
 			var data = Encoding.UTF8.GetBytes(ExpectedJSON());
 			var patchInfo = PatchInfoSerialization.Deserialize(data);
+			Assert.AreEqual(123, patchInfo.VersionCount);
 
 			var n = 0;
-			var names = new[] { "prefixes", "postfixes", "transpilers", "finalizers", "ilmanipulators" };
-			new[] { patchInfo.prefixes, patchInfo.postfixes, patchInfo.transpilers, patchInfo.finalizers, patchInfo.ilmanipulators }
+			GetFixes(patchInfo)
 				.Do(fixes =>
 				{
 					Assert.AreEqual(1, fixes.Length);
 
-					Assert.AreEqual(names[n++], fixes[0].owner);
+					Assert.AreEqual(fixNames[n++], fixes[0].owner);
 					Assert.AreEqual(Priority.High, fixes[0].priority);
 					Assert.AreEqual(new[] { "p1", null, "p2" }, fixes[0].before);
 					Assert.AreEqual(0, fixes[0].after.Length);
@@ -79,24 +90,27 @@ namespace HarmonyTests.Extras
 			var method = SymbolExtensions.GetMethodInfo(() => ExpectedJSON());
 			var hMethod = new HarmonyMethod(method, Priority.High, ["p1", null, "p2"], [], true);
 
+			Assert.AreEqual(GetFixes(new PatchInfo()).Length, fixNames.Length);
+
 			var originalPatchInfo = new PatchInfo();
 			originalPatchInfo.AddPrefixes("prefixes", [hMethod]);
 			originalPatchInfo.AddPostfixes("postfixes", [hMethod]);
 			originalPatchInfo.AddTranspilers("transpilers", [hMethod]);
 			originalPatchInfo.AddFinalizers("finalizers", [hMethod]);
 			originalPatchInfo.AddILManipulators("ilmanipulators", [hMethod]);
+			originalPatchInfo.AddInnerPrefixes("innerprefixes", [hMethod]);
+			originalPatchInfo.AddInnerPostfixes("innerpostfixes", [hMethod]);
 
 			var data = PatchInfoSerialization.Serialize(originalPatchInfo);
 			var patchInfo = PatchInfoSerialization.Deserialize(data);
 
 			var n = 0;
-			var names = new[] { "prefixes", "postfixes", "transpilers", "finalizers", "ilmanipulators" };
-			new[] { patchInfo.prefixes, patchInfo.postfixes, patchInfo.transpilers, patchInfo.finalizers, patchInfo.ilmanipulators }
+			GetFixes(patchInfo)
 				.Do(fixes =>
 				{
 					Assert.AreEqual(1, fixes.Length);
 
-					Assert.AreEqual(names[n++], fixes[0].owner);
+					Assert.AreEqual(fixNames[n++], fixes[0].owner);
 					Assert.AreEqual(Priority.High, fixes[0].priority);
 					Assert.AreEqual(new[] { "p1", null, "p2" }, fixes[0].before);
 					Assert.AreEqual(0, fixes[0].after.Length);

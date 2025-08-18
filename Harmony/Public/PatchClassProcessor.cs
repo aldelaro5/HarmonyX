@@ -32,7 +32,7 @@ namespace HarmonyLib
 		/// <summary name="Category">Name of the patch class's category</summary>
 		public string Category { get; set; }
 
-		/// <summary>Creates a patch class processor by pointing out a class. Similar to PatchAll() but without searching through all classes.</summary>
+		/// <summary>Creates a patch class processor by pointing out a class; similar to PatchAll() but without searching through all classes</summary>
 		/// <param name="instance">The Harmony instance</param>
 		/// <param name="type">The class to process (need to have at least a [HarmonyPatch] attribute if allowUnannotatedType is set to <b>false</b>)</param>
 		///
@@ -43,6 +43,7 @@ namespace HarmonyLib
 		/// <param name="instance">The Harmony instance</param>
 		/// <param name="type">The class to process (need to have at least a [HarmonyPatch] attribute if allowUnannotatedType is set to <b>false</b>)</param>
 		/// <param name="allowUnannotatedType">If <b>true</b>, the type doesn't need to have any <see cref="HarmonyPatch"/> attributes present for processing</param>
+		/// <note>Use this if you want to patch a class that is not annotated with HarmonyPatch</note>
 		///
 		public PatchClassProcessor(Harmony instance, Type type, bool allowUnannotatedType)
 		{
@@ -67,7 +68,8 @@ namespace HarmonyLib
 			foreach (var auxType in auxilaryTypes)
 			{
 				var method = PatchTools.GetPatchMethod(containerType, auxType.FullName);
-				if (method is not null) auxilaryMethods[auxType] = method;
+				if (method is not null)
+					auxilaryMethods[auxType] = method;
 			}
 
 			patchMethods = PatchTools.GetPatchMethods(containerType, containerAttributes.declaringType != null);
@@ -84,9 +86,6 @@ namespace HarmonyLib
 		///
 		public List<MethodInfo> Patch()
 		{
-			if (containerAttributes is null)
-				return null;
-
 			Exception exception = null;
 
 			var mainPrepareResult = RunMethod<HarmonyPrepare, bool>(true, false);
@@ -123,9 +122,6 @@ namespace HarmonyLib
 		///
 		public void Unpatch()
 		{
-			if (containerAttributes is null)
-				return;
-
 			var originals = GetBulkMethods();
 			MethodBase lastOriginal = null;
 			if (originals.Count > 0)
@@ -245,6 +241,8 @@ namespace HarmonyLib
 						patchInfo.AddTranspilers(instance.Id, [.. job.transpilers]);
 						patchInfo.AddFinalizers(instance.Id, [.. job.finalizers]);
 						patchInfo.AddILManipulators(instance.Id, [.. job.ilmanipulators]);
+						patchInfo.AddInnerPrefixes(instance.Id, [.. job.innerprefixes]);
+						patchInfo.AddInnerPostfixes(instance.Id, [.. job.innerpostfixes]);
 
 						replacement = PatchFunctions.UpdateWrapper(job.original, patchInfo);
 						PatchManager.AddReplacementOriginal(job.original, replacement);
@@ -302,9 +300,11 @@ namespace HarmonyLib
 			if (targetMethods is object)
 			{
 				string error = null;
-				result = targetMethods.ToList();
-				if (result is null) error = "null";
-				else if (result.Any(m => m is null)) error = "some element was null";
+				result = [.. targetMethods];
+				if (result is null)
+					error = "null";
+				else if (result.Any(m => m is null))
+					error = "some element was null";
 				if (error != null)
 				{
 					if (auxilaryMethods.TryGetValue(typeof(HarmonyTargetMethods), out var method))
@@ -324,7 +324,8 @@ namespace HarmonyLib
 
 		void ReportException(Exception exception, MethodBase original)
 		{
-			if (exception is null) return;
+			if (exception is null)
+				return;
 
 			Logger.Log(Logger.LogChannel.Debug, () =>
 			{
@@ -334,7 +335,8 @@ namespace HarmonyLib
 				sb.AppendLine($"### Original: {original?.FullDescription() ?? "NULL"}");
 				sb.AppendLine($"### Patch class: {containerType.FullDescription()}");
 				var logException = exception;
-				if (logException is HarmonyException hEx) logException = hEx.InnerException;
+				if (logException is HarmonyException hEx)
+					logException = hEx.InnerException;
 				var exStr = logException.ToString();
 				while (exStr.Contains("\n\n"))
 					exStr = exStr.Replace("\n\n", "\n");
@@ -343,7 +345,8 @@ namespace HarmonyLib
 				return sb.ToString();
 			});
 
-			if (exception is HarmonyException) throw exception; // assume HarmonyException already wraps the actual exception
+			if (exception is HarmonyException)
+				throw exception; // assume HarmonyException already wraps the actual exception
 			throw new HarmonyException($"Patching exception in method {original.FullDescription()}", exception);
 		}
 

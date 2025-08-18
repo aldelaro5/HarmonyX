@@ -17,16 +17,11 @@ using OpCodes = Mono.Cecil.Cil.OpCodes;
 
 namespace HarmonyLib
 {
-	/// <summary>Patch function helpers</summary>
 	internal static class PatchFunctions
 	{
-		/// <summary>Sorts patch methods by their priority rules</summary>
-		/// <param name="original">The original method</param>
-		/// <param name="patches">Patches to sort</param>
-		/// <param name="debug">Use debug mode</param>
-		/// <returns>The sorted patch methods</returns>
-		///
-		internal static List<MethodInfo> GetSortedPatchMethods(MethodBase original, Patch[] patches, bool debug) => new PatchSorter(patches, debug).Sort(original);
+		internal static List<MethodInfo> GetSortedPatchMethods(MethodBase original, Patch[] patches, bool debug)
+			=> [.. new PatchSorter(patches, debug).Sort().Select(p => p.GetMethod(original))];
+		private static List<Infix> GetInfixes(Patch[] patches) => [.. patches.Select(p => new Infix(p))];
 
 		/// <summary>Sorts patch methods by their priority rules</summary>
 		/// <param name="original">The original method</param>

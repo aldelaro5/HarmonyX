@@ -7,6 +7,7 @@ using MonoMod.Utils;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection.Emit;
 using static HarmonyLib.Code;
@@ -54,6 +55,25 @@ namespace HarmonyLibTests.IL
 	[TestFixture, NonParallelizable]
 	public class Instructions : TestLogger
 	{
+		class SomeClass
+		{
+			static void Test(string s) { }
+
+			public static void SomeMethod(bool flag)
+			{
+				Test("1");
+				if (flag) Test("2");
+				Test("3");
+			}
+		}
+
+		[HarmonyDebug]
+		[HarmonyPatch(typeof(SomeClass), nameof(SomeClass.SomeMethod))]
+		class SomeClassPatch
+		{
+			static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) => instructions;
+		}
+
 		[Test]
 		public void Test_MalformedStringOperand()
 		{

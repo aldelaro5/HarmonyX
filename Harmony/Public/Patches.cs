@@ -29,6 +29,14 @@ namespace HarmonyLib
 		///
 		public readonly ReadOnlyCollection<Patch> ILManipulators;
 
+		/// <summary>A collection of inner prefix <see cref="Patch"/></summary>
+		///
+		public readonly ReadOnlyCollection<Patch> InnerPrefixes;
+
+		/// <summary>A collection of inner postfix <see cref="Patch"/></summary>
+		///
+		public readonly ReadOnlyCollection<Patch> InnerPostfixes;
+
 		/// <summary>Gets all owners (Harmony IDs) or all known patches</summary>
 		/// <value>The patch owners</value>
 		///
@@ -42,6 +50,8 @@ namespace HarmonyLib
 				result.UnionWith(Transpilers.Select(p => p.owner));
 				result.UnionWith(Finalizers.Select(p => p.owner));
 				result.UnionWith(ILManipulators.Select(p => p.owner));
+				result.UnionWith(InnerPrefixes.Select(p => p.owner));
+				result.UnionWith(InnerPostfixes.Select(p => p.owner));
 				return result.ToList().AsReadOnly();
 			}
 		}
@@ -52,20 +62,26 @@ namespace HarmonyLib
 		/// <param name="transpilers">An array of transpileres as <see cref="Patch"/></param>
 		/// <param name="finalizers">An array of finalizeres as <see cref="Patch"/></param>
 		/// <param name="ilmanipulators">An array of ilmanipulators as <see cref="Patch"/></param>
+		/// <param name="innerprefixes">An array of inner prefixes as <see cref="Patch"/></param>
+		/// <param name="innerpostfixes">An array of inner postfixes as <see cref="Patch"/></param>
 		///
-		public Patches(Patch[] prefixes, Patch[] postfixes, Patch[] transpilers, Patch[] finalizers, Patch[] ilmanipulators)
+		public Patches(Patch[] prefixes, Patch[] postfixes, Patch[] transpilers, Patch[] finalizers, Patch[] ilmanipulators, Patch[] innerprefixes, Patch[] innerpostfixes)
 		{
 			prefixes ??= [];
 			postfixes ??= [];
 			transpilers ??= [];
 			finalizers ??= [];
 			ilmanipulators ??= [];
+			innerprefixes ??= [];
+			innerpostfixes ??= [];
 
 			Prefixes = prefixes.ToList().AsReadOnly();
 			Postfixes = postfixes.ToList().AsReadOnly();
 			Transpilers = transpilers.ToList().AsReadOnly();
 			Finalizers = finalizers.ToList().AsReadOnly();
 			ILManipulators = ilmanipulators.ToList().AsReadOnly();
+			InnerPrefixes = innerprefixes.ToList().AsReadOnly();
+			InnerPostfixes = innerpostfixes.ToList().AsReadOnly();
 		}
 
 		/// <summary>Creates a group of patches</summary>
@@ -75,6 +91,6 @@ namespace HarmonyLib
 		/// <param name="finalizers">An array of finalizeres as <see cref="Patch"/></param>
 		///
 		[Obsolete("Use newer constructor instead", true)]
-		public Patches(Patch[] prefixes, Patch[] postfixes, Patch[] transpilers, Patch[] finalizers) : this(prefixes, postfixes, transpilers, finalizers, null) { }
+		public Patches(Patch[] prefixes, Patch[] postfixes, Patch[] transpilers, Patch[] finalizers) : this(prefixes, postfixes, transpilers, finalizers, null, null, null) { }
 	}
 }

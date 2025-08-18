@@ -1,6 +1,9 @@
 using HarmonyLib;
+using HarmonyLibTests.Assets;
 using NUnit.Framework;
 using System;
+using System.Reflection;
+using System.Reflection.Emit;
 
 namespace HarmonyLibTests.IL
 {

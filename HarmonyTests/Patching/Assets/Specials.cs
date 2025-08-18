@@ -1,4 +1,5 @@
 using HarmonyLib;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -495,7 +496,7 @@ namespace HarmonyLibTests.Assets
 			switch (i)
 			{
 				case 0:
-					Console.WriteLine("Test");
+					TestTools.WriteLine("Test");
 					break;
 				default:
 					throw new ArgumentOutOfRangeException();
@@ -550,7 +551,7 @@ namespace HarmonyLibTests.Assets
 	[HarmonyPatch(nameof(ConcreteClass.Method))]
 	public static class ConcreteClass_Patch
 	{
-		static void Prefix(ConcreteClass __instance, string def, AnotherStruct loc) => TestTools.Log("ConcreteClass_Patch.Method.Prefix");
+		static void Prefix(ConcreteClass __instance, string def, AnotherStruct loc) => Assert.Null(null);
 	}
 
 	public class EventHandlerTestClass
@@ -560,21 +561,21 @@ namespace HarmonyLibTests.Assets
 
 		public void Run()
 		{
-			Console.WriteLine("EventHandlerTestClass.Run called");
+			TestTools.WriteLine("EventHandlerTestClass.Run called");
 			OnTestEvent += Handler;
 			_ = OnTestEvent.Method;
-			Console.WriteLine("EventHandlerTestClass.Run done");
+			TestTools.WriteLine("EventHandlerTestClass.Run done");
 		}
 
 		public void Handler()
 		{
 			try
 			{
-				Console.WriteLine("MarshalledTestClass.Handler called");
+				TestTools.WriteLine("MarshalledTestClass.Handler called");
 			}
 			catch
 			{
-				Console.WriteLine("MarshalledTestClass.Handler exception");
+				TestTools.WriteLine("MarshalledTestClass.Handler exception");
 			}
 		}
 	}
@@ -591,20 +592,20 @@ namespace HarmonyLibTests.Assets
 	{
 		public void Run()
 		{
-			Console.WriteLine("MarshalledTestClass.Run called");
+			TestTools.WriteLine("MarshalledTestClass.Run called");
 			Handler();
-			Console.WriteLine("MarshalledTestClass.Run called");
+			TestTools.WriteLine("MarshalledTestClass.Run called");
 		}
 
 		public void Handler()
 		{
 			try
 			{
-				Console.WriteLine("MarshalledTestClass.Handler called");
+				TestTools.WriteLine("MarshalledTestClass.Handler called");
 			}
 			catch
 			{
-				Console.WriteLine("MarshalledTestClass.Handler exception");
+				TestTools.WriteLine("MarshalledTestClass.Handler exception");
 			}
 		}
 	}
@@ -626,20 +627,20 @@ namespace HarmonyLibTests.Assets
 
 		public void Run()
 		{
-			Console.WriteLine("MarshalledWithEventHandlerTest1Class.Run called");
+			TestTools.WriteLine("MarshalledWithEventHandlerTest1Class.Run called");
 			OnTestEvent += Handler;
-			Console.WriteLine("MarshalledWithEventHandlerTest1Class.Run called");
+			TestTools.WriteLine("MarshalledWithEventHandlerTest1Class.Run called");
 		}
 
 		public void Handler()
 		{
 			try
 			{
-				Console.WriteLine("MarshalledWithEventHandlerTest1Class.Handler called");
+				TestTools.WriteLine("MarshalledWithEventHandlerTest1Class.Handler called");
 			}
 			catch
 			{
-				Console.WriteLine("MarshalledWithEventHandlerTest1Class.Handler exception");
+				TestTools.WriteLine("MarshalledWithEventHandlerTest1Class.Handler exception");
 			}
 		}
 	}
@@ -659,21 +660,21 @@ namespace HarmonyLibTests.Assets
 
 		public void Run()
 		{
-			Console.WriteLine("MarshalledWithEventHandlerTest2Class.Run called");
+			TestTools.WriteLine("MarshalledWithEventHandlerTest2Class.Run called");
 			OnTestEvent += Handler;
 			_ = OnTestEvent.Method;
-			Console.WriteLine("MarshalledWithEventHandlerTest2Class.Run called");
+			TestTools.WriteLine("MarshalledWithEventHandlerTest2Class.Run called");
 		}
 
 		public void Handler()
 		{
 			try
 			{
-				Console.WriteLine("MarshalledWithEventHandlerTest2Class.Handler called");
+				TestTools.WriteLine("MarshalledWithEventHandlerTest2Class.Handler called");
 			}
 			catch
 			{
-				Console.WriteLine("MarshalledWithEventHandlerTest2Class.Handler exception");
+				TestTools.WriteLine("MarshalledWithEventHandlerTest2Class.Handler exception");
 			}
 		}
 	}
@@ -683,6 +684,24 @@ namespace HarmonyLibTests.Assets
 	{
 		static void Prefix()
 		{
+		}
+	}
+
+	public class ClassTestingCallClosure
+	{
+		public string field1 = "";
+		public string field2 = "";
+
+		public CodeInstruction WIthoutContext() => CodeInstruction.CallClosure<Func<string, string>>(input => { return $"[{input}]"; });
+		public CodeInstruction WithContext() => CodeInstruction.CallClosure(() => { field2 = field1; });
+	}
+
+	public class ClassTestingIEnumerable
+	{
+		public static IEnumerable<string> IEnumerable1(List<string> input)
+		{
+			foreach (var i in input)
+				yield return i;
 		}
 	}
 }

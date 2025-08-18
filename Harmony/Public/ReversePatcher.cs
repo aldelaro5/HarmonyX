@@ -42,8 +42,9 @@ namespace HarmonyLib
 			var ici = typeof(IEnumerable<CodeInstruction>);
 			return methods.FirstOrDefault(m =>
 			{
-				if (m.ReturnType != ici) return false;
-				return m.Name.StartsWith($"<{methodName }>");
+				if (m.ReturnType != ici)
+					return false;
+				return m.Name.StartsWith($"<{methodName}>");
 			});
 		}
 

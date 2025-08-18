@@ -9,22 +9,81 @@ namespace HarmonyLib
 	public enum MethodType
 	{
 		/// <summary>This is a normal method</summary>
-		Normal,
+		Normal = 0,
 		/// <summary>This is a getter</summary>
-		Getter,
+		Getter = 1,
 		/// <summary>This is a setter</summary>
-		Setter,
+		Setter = 2,
 		/// <summary>This is a constructor</summary>
-		Constructor,
+		Constructor = 3,
 		/// <summary>This is a static constructor</summary>
-		StaticConstructor,
-		/// <summary>This is an enumerator (<see cref="IEnumerable{T}"/>, <see cref="IEnumerator{T}"/> or UniTask coroutine)</summary>
-		/// <remarks>This path will target the <see cref="IEnumerator.MoveNext"/> method that contains the actual enumerator code</remarks>
-		Enumerator,
-#if NET452_OR_GREATER || NETSTANDARD || NETCOREAPP
+		StaticConstructor = 4,
+		/// <summary>This targets the MoveNext method of the enumerator result, that actually contains the method's implementation</summary>
+		Enumerator = 5,
+#if NET45_OR_GREATER || NETSTANDARD || NETCOREAPP
 		/// <summary>This targets the MoveNext method of the async state machine, that actually contains the method's implementation</summary>
-		Async
+		Async = 6,
 #endif
+		/// <summary>Finalize</summary>
+		Finalizer = 7,
+		/// <summary>This is a add event method</summary>
+		EventAdd = 8,
+		/// <summary>This is a remove event method</summary>
+		EventRemove = 9,
+		/// <summary>This is a op_Implicit</summary>
+		OperatorImplicit = 10,
+		/// <summary>This is a op_Explicit</summary>
+		OperatorExplicit = 11,
+		/// <summary>This is a op_UnaryPlus</summary>
+		OperatorUnaryPlus = 12,
+		/// <summary>This is a op_UnaryNegation</summary>
+		OperatorUnaryNegation = 13,
+		/// <summary>This is a op_LogicalNot</summary>
+		OperatorLogicalNot = 14,
+		/// <summary>This is a op_OnesComplement</summary>
+		OperatorOnesComplement = 15,
+		/// <summary>This is a op_Increment</summary>
+		OperatorIncrement = 16,
+		/// <summary>This is a op_Decrement</summary>
+		OperatorDecrement = 17,
+		/// <summary>This is a op_True</summary>
+		OperatorTrue = 18,
+		/// <summary>This is a op_False</summary>
+		OperatorFalse = 19,
+		/// <summary>This is a op_Addition</summary>
+		OperatorAddition = 20,
+		/// <summary>This is a op_Subtraction</summary>
+		OperatorSubtraction = 21,
+		/// <summary>This is a op_Multiply</summary>
+		OperatorMultiply = 22,
+		/// <summary>This is a op_Division</summary>
+		OperatorDivision = 23,
+		/// <summary>This is a op_Modulus</summary>
+		OperatorModulus = 24,
+		/// <summary>This is a op_BitwiseAnd</summary>
+		OperatorBitwiseAnd = 25,
+		/// <summary>This is a op_BitwiseOr</summary>
+		OperatorBitwiseOr = 26,
+		/// <summary>This is a op_ExclusiveOr</summary>
+		OperatorExclusiveOr = 27,
+		/// <summary>This is a op_LeftShift</summary>
+		OperatorLeftShift = 28,
+		/// <summary>This is a op_RightShift</summary>
+		OperatorRightShift = 29,
+		/// <summary>This is a op_Equality</summary>
+		OperatorEquality = 30,
+		/// <summary>This is a op_Inequality</summary>
+		OperatorInequality = 31,
+		/// <summary>This is a op_GreaterThan</summary>
+		OperatorGreaterThan = 32,
+		/// <summary>This is a op_LessThan</summary>
+		OperatorLessThan = 33,
+		/// <summary>This is a op_GreaterThanOrEqual</summary>
+		OperatorGreaterThanOrEqual = 34,
+		/// <summary>This is a op_LessThanOrEqual</summary>
+		OperatorLessThanOrEqual = 35,
+		/// <summary>This is a op_Comma</summary>
+		OperatorComma = 36
 	}
 
 	/// <summary>Specifies the type of argument</summary>
@@ -58,7 +117,11 @@ namespace HarmonyLib
 		/// <summary>A reverse patch</summary>
 		ReversePatch,
 		/// <summary>A MonoMod</summary>
-		ILManipulator
+		ILManipulator,
+		/// <summary>An inner prefix patch</summary>
+		InnerPrefix,
+		/// <summary>An inner postfix patch</summary>
+		InnerPostfix
 	}
 
 	/// <summary>Specifies the type of reverse patch</summary>
@@ -117,7 +180,7 @@ namespace HarmonyLib
 
 	/// <summary>Annotation to define a category for use with PatchCategory</summary>
 	///
-	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
 	public class HarmonyPatchCategory : HarmonyAttribute
 	{
 		/// <summary>Annotation specifying the category</summary>
@@ -128,7 +191,7 @@ namespace HarmonyLib
 
 	/// <summary>Annotation to define your Harmony patch methods</summary>
 	///
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Delegate | AttributeTargets.Method, AllowMultiple = true)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Delegate | AttributeTargets.Method, AllowMultiple = true)]
 	public class HarmonyPatch : HarmonyAttribute
 	{
 		/// <summary>An empty annotation can be used together with TargetMethod(s)</summary>
@@ -516,7 +579,7 @@ namespace HarmonyLib
 
 	/// <summary>Annotation to define your standin methods for reverse patching</summary>
 	///
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method, AllowMultiple = true)]
 	public class HarmonyReversePatch : HarmonyAttribute
 	{
 		/// <summary>An annotation that specifies the type of reverse patching</summary>
@@ -527,14 +590,14 @@ namespace HarmonyLib
 
 	/// <summary>A Harmony annotation to define that all methods in a class are to be patched</summary>
 	///
-	[AttributeUsage(AttributeTargets.Class)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
 	public class HarmonyPatchAll : HarmonyAttribute
 	{
 	}
 
 	/// <summary>A Harmony annotation used to change order in which Harmony patches are applied</summary>
 	///
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method)]
 	public class HarmonyPriority : HarmonyAttribute
 	{
 		/// <summary>A Harmony annotation to define patch priority</summary>
@@ -545,7 +608,7 @@ namespace HarmonyLib
 
 	/// <summary>A Harmony annotation to define that a patch comes before another patch</summary>
 	///
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method)]
 	public class HarmonyBefore : HarmonyAttribute
 	{
 		/// <summary>A Harmony annotation to define that a patch comes before another patch</summary>
@@ -555,7 +618,7 @@ namespace HarmonyLib
 	}
 
 	/// <summary>A Harmony annotation to define that a patch comes after another patch</summary>
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method)]
 	public class HarmonyAfter : HarmonyAttribute
 	{
 		/// <summary>A Harmony annotation to define that a patch comes after another patch</summary>
@@ -565,7 +628,7 @@ namespace HarmonyLib
 	}
 
 	/// <summary>A Harmony annotation to output a debug log for a patch</summary>
-	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
+	[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Method)]
 	public class HarmonyDebug : HarmonyAttribute
 	{
 		/// <summary>A Harmony annotation to debug a patch (output uses <see cref="FileLog"/> to log to your Desktop)</summary>
@@ -663,7 +726,7 @@ namespace HarmonyLib
 
 	/// <summary>A Harmony annotation to declare injected arguments</summary>
 	///
-	[AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Method | AttributeTargets.Class, AllowMultiple = true)]
+	[AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Method | AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = true)]
 	public class HarmonyArgument : Attribute
 	{
 		/// <summary>The name of the original argument</summary>

@@ -9,7 +9,6 @@ namespace HarmonyLib
 {
 	/// <summary>Under Mono, HarmonyException wraps IL compile errors with detailed information about the failure</summary>
 	///
-	[Serializable]
 	public class HarmonyException : Exception
 	{
 		Dictionary<int, CodeInstruction> instructions = new();
@@ -18,12 +17,6 @@ namespace HarmonyLib
 		internal HarmonyException() { }
 		internal HarmonyException(string message) : base(message) { }
 		internal HarmonyException(string message, Exception innerException) : base(message, innerException) { }
-
-		/// <summary>Default serialization constructor (not implemented)</summary>
-		/// <param name="serializationInfo">The info</param>
-		/// <param name="streamingContext">The context</param>
-		///
-		protected HarmonyException(System.Runtime.Serialization.SerializationInfo serializationInfo, System.Runtime.Serialization.StreamingContext streamingContext) => throw new NotImplementedException();
 
 		internal HarmonyException(Exception innerException, Dictionary<int, CodeInstruction> instructions, int errorOffset) : base("IL Compile Error", innerException)
 		{
@@ -36,7 +29,8 @@ namespace HarmonyLib
 			if (ex is HarmonyException {instructions: {Count: > 0}, errorOffset: >= 0})
 				return ex;
 			var match = Regex.Match(ex.Message.TrimEnd(), @"(?:Reason: )?Invalid IL code in.+: IL_(\d{4}): (.+)$");
-			if (match.Success is false) return new HarmonyException("IL Compile Error (unknown location)", ex);
+			if (match.Success is false)
+				return new HarmonyException("IL Compile Error (unknown location)", ex);
 
 			var finalInstructions = ILManipulator.GetInstructions(body) ?? new Dictionary<int, CodeInstruction>();
 
@@ -62,7 +56,7 @@ namespace HarmonyLib
 		/// <summary>Get a list of IL instructions without offsets</summary>
 		/// <returns>A list of <see cref="CodeInstruction"/></returns>
 		///
-		public List<CodeInstruction> GetInstructions() => instructions.OrderBy(ins => ins.Key).Select(ins => ins.Value).ToList();
+		public List<CodeInstruction> GetInstructions() => [.. instructions.OrderBy(ins => ins.Key).Select(ins => ins.Value)];
 
 		/// <summary>Get the error offset of the errornous IL instruction</summary>
 		/// <returns>The offset</returns>

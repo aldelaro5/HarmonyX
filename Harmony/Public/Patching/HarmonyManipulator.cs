@@ -55,6 +55,8 @@ public class HarmonyManipulator
 	private List<PatchContext> postfixes;
 	private List<PatchContext> prefixes;
 	private List<PatchContext> transpilers;
+	private List<PatchContext> innerprefixes;
+	private List<PatchContext> innerpostfixes;
 
 	private Type _returnType;
 	private Type ReturnType => _returnType ??= AccessTools.GetReturnedType(original);
@@ -137,6 +139,8 @@ public class HarmonyManipulator
 			Print(transpilers, "transpilers");
 			Print(finalizers, "finalizers");
 			Print(ilManipulators, "ilmanipulators");
+			Print(innerprefixes, "innerprefixes");
+			Print(innerpostfixes, "innerpostfixes");
 
 			return sb.ToString();
 		}, debug);
@@ -382,7 +386,7 @@ public class HarmonyManipulator
 			WriteTranspilers();
 
 			// If no need to wrap anything, we're basically done!
-			if (prefixes.Count + postfixes.Count + finalizers.Count + ilManipulators.Count == 0)
+			if (prefixes.Count + postfixes.Count + finalizers.Count + ilManipulators.Count + innerprefixes.Count + innerpostfixes.Count == 0)
 			{
 				Logger.Log(Logger.LogChannel.IL,
 					() => $"Generated patch ({ctx.Method.FullName}):\n{ctx.Body.ToILDasmString()}", debug);
@@ -785,7 +789,7 @@ public class HarmonyManipulator
 
 	private void SortPatches()
 	{
-		Patch[] prefixesArr, postfixesArr, transpilersArr, finalizersArr, ilmanipulatorsArr;
+		Patch[] prefixesArr, postfixesArr, transpilersArr, finalizersArr, ilmanipulatorsArr, innerprefixesArr, innerpostfixesArr;
 
 		// Lock to ensure no more patches are added while we're sorting
 		lock (patchInfo)
@@ -795,6 +799,8 @@ public class HarmonyManipulator
 			transpilersArr = patchInfo.transpilers.ToArray();
 			finalizersArr = patchInfo.finalizers.ToArray();
 			ilmanipulatorsArr = patchInfo.ilmanipulators.ToArray();
+			innerprefixesArr = patchInfo.innerprefixes.ToArray();
+			innerpostfixesArr = patchInfo.innerpostfixes.ToArray();
 		}
 
 		static List<PatchContext> Sort(MethodBase original, Patch[] patches, bool debug)
@@ -816,6 +822,8 @@ public class HarmonyManipulator
 		transpilers = Sort(original, transpilersArr, debug);
 		finalizers = Sort(original, finalizersArr, debug);
 		ilManipulators = Sort(original, ilmanipulatorsArr, debug);
+		innerprefixes = Sort(original, innerprefixesArr, debug);
+		innerpostfixes = Sort(original, innerpostfixesArr, debug);
 	}
 
 	private bool EmitOriginalBaseMethod()

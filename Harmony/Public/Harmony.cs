@@ -88,7 +88,7 @@ namespace HarmonyLib
 			Id = id;
 #pragma warning restore 618
 
-			// TODO: enable to switch to building methods with CECIL
+			// FOR TESTING: enable switch to building methods with CECIL
 			// Switches.SetSwitchValue(Switches.DMDType, "cecil");
 		}
 
@@ -108,7 +108,7 @@ namespace HarmonyLib
 		///
 		public PatchProcessor CreateProcessor(MethodBase original) => new(this, original);
 
-		/// <summary>Creates a patch class processor from an annotated class</summary>
+		/// <summary>Creates a patch class processor from a class</summary>
 		/// <param name="type">The class/type</param>
 		/// <returns>A new <see cref="PatchClassProcessor"/> instance</returns>
 		///
@@ -128,17 +128,17 @@ namespace HarmonyLib
 		///
 		public ReversePatcher CreateReversePatcher(MethodBase original, HarmonyMethod standin) => new(this, original, standin);
 
-		/// <summary>Searches an assembly for Harmony annotations and uses them to create patches</summary>
+		/// <summary>Searches an assembly for HarmonyPatch-annotated classes/structs and uses them to create patches</summary>
 		/// <param name="assembly">The assembly</param>
 		///
-		public void PatchAll(Assembly assembly) => AccessTools.GetTypesFromAssembly(assembly).Do(type => CreateClassProcessor(type).Patch());
+		public void PatchAll(Assembly assembly) => AccessTools.GetTypesFromAssembly(assembly).DoIf(type => type.HasHarmonyAttribute(), type => CreateClassProcessor(type).Patch());
 
-		/// <summary>Searches the given type for Harmony annotation and uses them to create patches</summary>
+		/// <summary>Searches an assembly for Harmony-annotated classes without category annotations and uses them to create patches</summary>
 		/// <param name="type">The type to search</param>
 		///
 		public void PatchAll(Type type) => CreateClassProcessor(type, true).Patch();
 
-		/// <summary>Searches an assembly for Harmony-annotated classes without category annotations and uses them to create patches</summary>
+		/// <summary>Searches an assembly for HarmonyPatch-annotated classes/structs without category annotations and uses them to create patches</summary>
 		///
 		public void PatchAllUncategorized()
 		{
@@ -147,13 +147,13 @@ namespace HarmonyLib
 			PatchAllUncategorized(assembly);
 		}
 
-		/// <summary>Searches an assembly for Harmony-annotated classes without category annotations and uses them to create patches</summary>
+		/// <summary>Searches an assembly for HarmonyPatch-annotated classes/structs without category annotations and uses them to create patches</summary>
 		/// <param name="assembly">The assembly</param>
 		///
 		public void PatchAllUncategorized(Assembly assembly)
 		{
-			var patchClasses = AccessTools.GetTypesFromAssembly(assembly).Select(CreateClassProcessor).ToArray();
-			patchClasses.DoIf((patchClass => string.IsNullOrEmpty(patchClass.Category)), (patchClass => patchClass.Patch()));
+			var patchClasses = AccessTools.GetTypesFromAssembly(assembly).Where(type => type.HasHarmonyAttribute()).Select(CreateClassProcessor).ToArray();
+			patchClasses.DoIf(patchClass => string.IsNullOrEmpty(patchClass.Category), patchClass => patchClass.Patch());
 		}
 
 		/// <summary>Searches the current assembly for Harmony annotations with a specific category and uses them to create patches</summary>
@@ -166,7 +166,7 @@ namespace HarmonyLib
 			PatchCategory(assembly, category);
 		}
 
-		/// <summary>Searches an assembly for Harmony annotations with a specific category and uses them to create patches</summary>
+		/// <summary>Searches an assembly for HarmonyPatch-annotated classes/structs with a specific category and uses them to create patches</summary>
 		/// <param name="assembly">The assembly</param>
 		/// <param name="category">Name of patch category</param>
 		///
@@ -176,6 +176,7 @@ namespace HarmonyLib
 				.Where(type =>
 				{
 					var harmonyAttributes = HarmonyMethodExtensions.GetFromType(type);
+					if (harmonyAttributes.Count == 0) return false;
 					var containerAttributes = HarmonyMethod.Merge(harmonyAttributes);
 					return containerAttributes.category == category;
 				})
@@ -192,7 +193,7 @@ namespace HarmonyLib
 		/// <returns>The replacement method that was created to patch the original method</returns>
 		///
 		public MethodInfo Patch(MethodBase original, HarmonyMethod prefix = null, HarmonyMethod postfix = null, HarmonyMethod transpiler = null, HarmonyMethod finalizer = null,
-			HarmonyMethod ilmanipulator = null)
+			HarmonyMethod ilmanipulator = null/*, HarmonyMethod infix = null*/)
 		{
 			var processor = CreateProcessor(original);
 			_ = processor.AddPrefix(prefix);
@@ -200,6 +201,7 @@ namespace HarmonyLib
 			_ = processor.AddTranspiler(transpiler);
 			_ = processor.AddFinalizer(finalizer);
 			_ = processor.AddILManipulator(ilmanipulator);
+			//_ = processor.AddInfix(infix);
 			return processor.Patch();
 		}
 
@@ -236,7 +238,7 @@ namespace HarmonyLib
 		/// <returns>The replacement method that was created to patch the stub method</returns>
 		///
 		[Obsolete("Use newer ReversePatch() instead", true)]
-		public static MethodInfo ReversePatch(MethodBase original, HarmonyMethod standin, MethodInfo transpiler)
+		public static MethodInfo ReversePatch(MethodBase original, HarmonyMethod standin, MethodInfo transpiler = null)
 		{
 			return PatchFunctions.ReversePatch(standin, original, transpiler, null);
 		}
@@ -338,7 +340,7 @@ namespace HarmonyLib
 			UnpatchCategory(assembly, category);
 		}
 
-		/// <summary>Searches an assembly for types with a specific category annotation and uses them to unpatch existing patches. Fully unpatching is not supported. Be careful, unpatching is global</summary>
+		/// <summary>Searches an assembly for HarmonyPatch-annotated classes/structs with a specific category annotation and uses them to unpatch existing patches. Fully unpatching is not supported. Be careful, unpatching is global</summary>
 		/// <param name="assembly">The assembly</param>
 		/// <param name="category">Name of patch category</param>
 		///
@@ -348,6 +350,7 @@ namespace HarmonyLib
 				.Where(type =>
 				{
 					var harmonyAttributes = HarmonyMethodExtensions.GetFromType(type);
+					if (harmonyAttributes.Count == 0) return false;
 					var containerAttributes = HarmonyMethod.Merge(harmonyAttributes);
 					return containerAttributes.category == category;
 				})

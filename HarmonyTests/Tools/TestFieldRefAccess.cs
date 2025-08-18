@@ -129,7 +129,6 @@ namespace HarmonyLibTests.Tools
 			public void Run()
 			{
 				var testSuiteLabel = $"field={field.Name}, T={typeof(T).Name}, I={instanceType.Name}, F={typeof(F).Name}";
-				TestTools.Log(testSuiteLabel + ":", indentLevel: 0);
 				Assert.Multiple(() =>
 				{
 					foreach (var pair in availableTestCases)
@@ -144,15 +143,11 @@ namespace HarmonyLibTests.Tools
 
 			void Run(string testSuiteLabel, string testCaseName, IATestCase<T, F> testCase, ReusableConstraint expectedConstraint)
 			{
-				TestTools.Log(testCaseName + ":", writeLine: false);
 				var testCaseLabel = $"{testSuiteLabel}, testCase={testCaseName}";
 
 				var resolvedConstraint = expectedConstraint.Resolve();
 				if (resolvedConstraint is SkipTestConstraint)
-				{
-					TestTools.Log(resolvedConstraint);
 					return;
-				}
 
 				var instance = field.IsStatic ? default : CloneInstancePrototype<T>(instanceType);
 				var origValue = GetOrigValue(field);
@@ -172,7 +167,6 @@ namespace HarmonyLibTests.Tools
 						testCase.Set(ref instance, testValue);
 						var newValue = field.GetValue(instance);
 						Assert.AreEqual(testValue, TryConvert(newValue), "{0}: expected Equals(testValue, field.GetValue(instance))", testCaseLabel);
-						TestTools.Log($"{field.Name}: {origValue} => {testCase.Get(ref instance)}");
 						testCase.Set(ref instance, value); // reset field value
 						if (field.FieldType.IsInstanceOfType(newValue) is false)
 							throw new IncompatibleFieldTypeException($"expected field.GetValue(instance) is {field.FieldType.Name} " +
@@ -193,19 +187,17 @@ namespace HarmonyLibTests.Tools
 				if (expectedExceptionType is null)
 				{
 					if (constraintResult.ActualValue is Exception ex)
-						TestTools.Log($"UNEXPECTED {ExceptionToString(ex)} (expected no exception)\n{ex.StackTrace}");
+						Assert.Fail($"got {ExceptionToString(ex)}, expected no exception\n{ex.StackTrace}");
 				}
 				else
 				{
 					if (constraintResult.ActualValue is Exception ex)
 					{
-						if (constraintResult.IsSuccess)
-							TestTools.Log($"expected {ExceptionToString(ex)} (expected {resolvedConstraint})");
-						else
-							TestTools.Log($"UNEXPECTED {ExceptionToString(ex)} (expected {resolvedConstraint})\n{ex.StackTrace}");
+						if (constraintResult.IsSuccess == false)
+							Assert.Fail($"got {ExceptionToString(ex)}, expected {resolvedConstraint}\n{ex.StackTrace}");
 					}
 					else
-						TestTools.Log($"UNEXPECTED no exception (expected {resolvedConstraint})");
+						Assert.Fail($"got no exception, expected {resolvedConstraint}");
 				}
 			}
 
@@ -717,7 +709,7 @@ namespace HarmonyLibTests.Tools
 		[Test]
 		public void Test_ClassInstance_ListOfPrivateStructFieldType()
 		{
-			Assert.Multiple(() =>
+			Assert.Multiple(static () =>
 			{
 				var field = AccessTools.Field(typeof(AccessToolsClass), "field8");
 				var expectedCaseToConstraint = expectedCaseToConstraint_ClassInstance;
@@ -745,7 +737,7 @@ namespace HarmonyLibTests.Tools
 					field, TestValue(), expectedCaseToConstraint_ClassInstance_StructT);
 				// List<T> is invariant - List<AccessTools.Inner> cannot be cast to List<IInner> nor vice versa,
 				// so can't do TestSuite_Class<AccessToolsClass, AccessToolsClass, List<IInner>(...).
-				Assert.That(TestValue(), Is.Not.InstanceOf(typeof(List<IInner>)));
+				Assert.That(TestValue(), Is.Not.InstanceOf<List<IInner>>());
 				TestSuite_Class<AccessToolsClass, AccessToolsClass, object>(
 					field, TestValue(), expectedCaseToConstraint);
 				TestSuite_Class<AccessToolsClass, AccessToolsClass, IList>(

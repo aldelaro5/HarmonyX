@@ -44,6 +44,8 @@ namespace HarmonyLibTests
 		// Note: Must be a property rather than a field, since the specific TestContext streams can change between tests.
 		static TextWriter LogWriter => TestContext.Out;
 
+		public static void WriteLine(string _) { }
+
 		public static void Log(object obj, int indentLevel = 1, int? indentLevelAfterNewLine = null, bool writeLine = true)
 		{
 			var indentBeforeNewLine = new string('\t', indentLevel);
@@ -233,7 +235,7 @@ namespace HarmonyLibTests
 		{
 			readonly AppDomain parentDomain = parentDomain;
 
-			// Run an action in "isolation" (seperate AppDomain that's unloaded afterwards).
+			// Run an action in "isolation" (separate AppDomain that's unloaded afterwards)
 			// This a static method and thus is run in the AppDomain of the caller (the main AppDomain).
 			public static void RunInIsolationContext(Action<ITestIsolationContext> action)
 			{
@@ -336,13 +338,6 @@ namespace HarmonyLibTests
 			var explicitAttribute = test.GetCustomAttributes<ExplicitAttribute>(true).First();
 			explicitAttribute.ApplyToTest(test);
 			return new ExplicitException((string)test.Properties.Get(PropertyNames.SkipReason) ?? "");
-		}
-
-		[TearDown]
-		public void BaseTearDown()
-		{
-			var result = TestExecutionContext.CurrentContext.CurrentResult;
-			TestTools.Log($"--- {result.FullName} => {result.ResultState}", indentLevel: 0);
 		}
 	}
 }

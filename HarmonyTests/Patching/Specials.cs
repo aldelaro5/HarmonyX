@@ -1,15 +1,17 @@
 using HarmonyLib;
-using HarmonyLib.Tools;
 using HarmonyLibTests.Assets;
 using HarmonyLibTests.Assets.Methods;
 using NUnit.Framework;
 using System;
+using System.Linq;
+
 #if NET6_0_OR_GREATER
 using System.Net.Http;
+using System.Reflection.Emit;
 #else
 using System.Net;
+using System.Reflection.Emit;
 #endif
-using System.Linq;
 
 namespace HarmonyLibTests.Patching
 {
@@ -76,7 +78,7 @@ namespace HarmonyLibTests.Patching
 			Assert.AreEqual(new[] { 1, 0 }, ResultRefStruct.numbersPrefix);
 			Assert.AreEqual(new[] { 2, 0 }, ResultRefStruct.numbersPostfix);
 			Assert.AreEqual(new[] { 3 }, ResultRefStruct.numbersPostfixWithNull);
-			Assert.Throws<Exception>(() => test.ToFinalizer(), "ToFinalizer method does not throw");
+			_ = Assert.Throws<Exception>(() => test.ToFinalizer(), "ToFinalizer method does not throw");
 			Assert.AreEqual(new[] { 5, 0 }, ResultRefStruct.numbersMixed);
 
 			var replacements = processor.Patch();
@@ -293,16 +295,12 @@ namespace HarmonyLibTests.Patching
 			var someStruct1 = new ConcreteClass().Method("test", new AnotherStruct());
 			Assert.True(someStruct1.accepted, "someStruct1.accepted");
 
-			TestTools.Log($"Patching ConcreteClass_Patch start");
 			var replacements = processor.Patch();
 			Assert.NotNull(replacements, "replacements");
 			Assert.AreEqual(1, replacements.Count);
-			TestTools.Log($"Patching ConcreteClass_Patch done");
 
-			TestTools.Log($"Running patched ConcreteClass_Patch start");
 			var someStruct2 = new ConcreteClass().Method("test", new AnotherStruct());
 			Assert.True(someStruct2.accepted, "someStruct2.accepted");
-			TestTools.Log($"Running patched ConcreteClass_Patch done");
 		}
 
 		[Test, NonParallelizable]
@@ -324,35 +322,15 @@ namespace HarmonyLibTests.Patching
 			var method = AccessTools.DeclaredMethod(cls, name);
 			Assert.NotNull(method, "method");
 
-			TestTools.Log($"Test_Returning_Structs: patching {name} start");
-			try
-			{
-				var replacement = instance.Patch(method, new HarmonyMethod(prefix));
-				Assert.NotNull(replacement, "replacement");
-			}
-			catch (Exception ex)
-			{
-				TestTools.Log($"Test_Returning_Structs: patching {name} exception: {ex}");
-			}
-			TestTools.Log($"Test_Returning_Structs: patching {name} done");
+			var replacement = instance.Patch(method, new HarmonyMethod(prefix));
+			Assert.NotNull(replacement, "replacement");
 
 			var clsInstance = Activator.CreateInstance(cls);
-			try
-			{
-				TestTools.Log($"Test_Returning_Structs: running patched {name}");
-
-				var original = AccessTools.DeclaredMethod(cls, name);
-				Assert.NotNull(original, $"{name}: original");
-				var result = original.Invoke(type == "S" ? null : clsInstance, ["test"]);
-				Assert.NotNull(result, $"{name}: result");
-				Assert.AreEqual($"St{n:D2}", result.GetType().Name);
-
-				TestTools.Log($"Test_Returning_Structs: running patched {name} done");
-			}
-			catch (Exception ex)
-			{
-				TestTools.Log($"Test_Returning_Structs: running {name} exception: {ex}");
-			}
+			var original = AccessTools.DeclaredMethod(cls, name);
+			Assert.NotNull(original, $"{name}: original");
+			var result = original.Invoke(type == "S" ? null : clsInstance, ["test"]);
+			Assert.NotNull(result, $"{name}: result");
+			Assert.AreEqual($"St{n:D2}", result.GetType().Name);
 		}
 
 		[Test]
@@ -420,7 +398,7 @@ namespace HarmonyLibTests.Patching
 			_ = instance.Patch(original, prefix: new HarmonyMethod(prefixWithControl));
 			DeadEndCode_Patch1.prefixCalled = false;
 			DeadEndCode_Patch1.postfixCalled = false;
-			test.Method();
+			_ = test.Method();
 			Assert.True(DeadEndCode_Patch1.prefixCalled);
 			Assert.True(DeadEndCode_Patch1.postfixCalled);
 		}
@@ -512,11 +490,12 @@ namespace HarmonyLibTests.Patching
 			try
 			{
 				_ = patcher.Patch();
+				Assert.Fail("expecting exception");
 			}
 			catch (HarmonyException ex)
 			{
 				Assert.NotNull(ex.InnerException);
-				Assert.IsInstanceOf(typeof(ArgumentException), ex.InnerException);
+				Assert.IsInstanceOf<ArgumentException>(ex.InnerException);
 				Assert.AreEqual("Test", ex.InnerException.Message);
 				return;
 			}
@@ -542,8 +521,6 @@ namespace HarmonyLibTests.Patching
 		[Test]
 		public void Test_PatchEventHandler()
 		{
-			Console.WriteLine($"### EventHandlerTestClass TEST");
-
 			var patchClass = typeof(EventHandlerTestClass_Patch);
 			Assert.NotNull(patchClass);
 
@@ -555,16 +532,12 @@ namespace HarmonyLibTests.Patching
 			Assert.AreEqual(1, patched.Count);
 			Assert.NotNull(patched[0]);
 
-			Console.WriteLine($"### EventHandlerTestClass BEFORE");
 			new EventHandlerTestClass().Run();
-			Console.WriteLine($"### EventHandlerTestClass AFTER");
 		}
 
 		[Test]
 		public void Test_PatchMarshalledClass()
 		{
-			Console.WriteLine($"### MarshalledTestClass TEST");
-
 			var patchClass = typeof(MarshalledTestClass_Patch);
 			Assert.NotNull(patchClass);
 
@@ -576,16 +549,12 @@ namespace HarmonyLibTests.Patching
 			Assert.AreEqual(1, patched.Count);
 			Assert.NotNull(patched[0]);
 
-			Console.WriteLine($"### MarshalledTestClass BEFORE");
 			new MarshalledTestClass().Run();
-			Console.WriteLine($"### MarshalledTestClass AFTER");
 		}
 
 		[Test]
 		public void Test_MarshalledWithEventHandler1()
 		{
-			Console.WriteLine($"### MarshalledWithEventHandlerTest1 TEST");
-
 			var patchClass = typeof(MarshalledWithEventHandlerTest1Class_Patch);
 			Assert.NotNull(patchClass);
 
@@ -597,16 +566,12 @@ namespace HarmonyLibTests.Patching
 			Assert.AreEqual(1, patched.Count);
 			Assert.NotNull(patched[0]);
 
-			Console.WriteLine($"### MarshalledWithEventHandlerTest1 BEFORE");
 			new MarshalledWithEventHandlerTest1Class().Run();
-			Console.WriteLine($"### MarshalledWithEventHandlerTest1 AFTER");
 		}
 
 		[Test]
 		public void Test_MarshalledWithEventHandler2()
 		{
-			Console.WriteLine($"### MarshalledWithEventHandlerTest2 TEST");
-
 			var patchClass = typeof(MarshalledWithEventHandlerTest2Class_Patch);
 			Assert.NotNull(patchClass);
 
@@ -618,9 +583,50 @@ namespace HarmonyLibTests.Patching
 			Assert.AreEqual(1, patched.Count);
 			Assert.NotNull(patched[0]);
 
-			Console.WriteLine($"### MarshalledWithEventHandlerTest2 BEFORE");
 			new MarshalledWithEventHandlerTest2Class().Run();
-			Console.WriteLine($"### MarshalledWithEventHandlerTest2 AFTER");
+		}
+
+		[Test]
+		public void Test_CallClosure()
+		{
+			Transpilers.DelegateCache.Clear();
+			Transpilers.delegateCounter = 0;
+			var instance = new ClassTestingCallClosure
+			{
+				field1 = "test",
+				field2 = "tobereplaced"
+			};
+
+			var code1 = instance.WIthoutContext();
+			var action1 = code1.operand as DynamicMethod;
+			Assert.NotNull(action1);
+			var result = action1.Invoke(null, ["TEST"]);
+			Assert.AreEqual(result, "[TEST]");
+			Assert.AreEqual(Transpilers.delegateCounter, 0);
+
+			var code2 = instance.WithContext();
+			Assert.AreEqual(instance.field1, "test");
+			Assert.AreEqual(instance.field2, "tobereplaced");
+			var action2 = code2.operand as DynamicMethod;
+			Assert.NotNull(action2);
+			_ = action2.Invoke(null, []);
+			Assert.AreEqual(instance.field1, "test");
+			Assert.AreEqual(instance.field2, "test");
+			Assert.AreEqual(Transpilers.delegateCounter, 1);
+
+			_ = instance.WithContext();
+			Assert.AreEqual(Transpilers.delegateCounter, 2);
+		}
+
+		[Test]
+		public void Test_PatchEnumerables()
+		{
+			var type = AccessTools.InnerTypes(typeof(ClassTestingIEnumerable)).FirstOrDefault();
+			Assert.NotNull(type);
+			var harmony = new Harmony("test");
+			var method = AccessTools.DeclaredMethod(type, "MoveNext");
+			Assert.NotNull(method);
+			_ = harmony.Patch(method);
 		}
 	}
 }
